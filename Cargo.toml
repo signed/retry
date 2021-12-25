@@ -3,6 +3,9 @@ name = "retry-cli"
 description = "retry a script until it exits with code 0"
 version = "0.1.0"
 edition = "2021"
+repository = "https://github.com/signed/retry"
+publish = false
+exclude = ["scripts/*", "docs/*"]
 
 # https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#development-dependencies
 [dependencies]
