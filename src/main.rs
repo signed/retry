@@ -1,16 +1,25 @@
 use std::error::Error;
 use std::process::Command;
+use std::time::{Duration, Instant};
 
 use retry::{OperationResult, retry};
 use retry::delay::Fixed;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let script_name = "./scripts/fail.sh";
-    let notify = true;
     let delay_in_seconds = 1;
 
-    let delay_in_milliseconds = delay_in_seconds * 1000;
-    let retry_result = retry(Fixed::from_millis(delay_in_milliseconds), || {
+    let notify = Some(true).unwrap_or(false);
+    let retry_count = Some(10).unwrap_or(usize::MAX);
+    let retry_duration = Some(Duration::from_secs(1) * 5).unwrap_or(Duration::MAX);
+    let started = Instant::now();
+
+    let duration_iterator = Fixed::from_millis(delay_in_seconds * 1000)
+        .take(retry_count)
+        .take_while(|_| {
+            return started.elapsed() <= retry_duration;
+        });
+    let retry_result = retry(duration_iterator, || {
         let result = Command::new(script_name)
             .output();
         let output = match result {
