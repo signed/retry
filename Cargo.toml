@@ -1,10 +1,12 @@
 [package]
 name = "retry-cli"
+description = "retry a script until it exits with code 0"
 version = "0.1.0"
 edition = "2021"
 
 # https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#development-dependencies
 [dependencies]
+clap = { version = "3.0.0-rc.8", features = ["derive"] }
 
 [dependencies.retry]
 version = "1.3.0"
