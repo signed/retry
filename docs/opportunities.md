@@ -1,0 +1,1 @@
+- [ ] [progress indicator](https://docs.rs/indicatif/latest/indicatif/#human-readable-formatting)
