@@ -13,7 +13,7 @@ use clap::Parser;
 struct CliArgs {
     /// maximum number of script executions before giving up
     #[clap(long)]
-    count: Option<usize>,
+    count: Option<u64>,
 
     /// maximum duration in seconds before giving up
     #[clap(long)]
@@ -34,7 +34,7 @@ struct CliArgs {
 
 fn main() -> Result<(), Box<dyn Error>> {
     let args: CliArgs = CliArgs::parse();
-    let retry_count = args.count.unwrap_or(usize::MAX);
+    let retry_count = args.count.unwrap_or(u64::MAX);
     let retry_duration = args.duration.map(|u| { Duration::from_secs(u) }).unwrap_or(Duration::MAX);
     let notify = args.notify;
     let delay_in_seconds = args.delay;
@@ -43,7 +43,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let started = Instant::now();
 
     let duration_iterator = Fixed::from_millis(delay_in_seconds * 1000)
-        .take(retry_count)
+        .take(usize::try_from(retry_count)?)
         .take_while(|_| {
             return started.elapsed() <= retry_duration;
         });
