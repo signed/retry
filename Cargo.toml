@@ -9,7 +9,7 @@ exclude = ["scripts/*", "docs/*"]
 
 # https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#development-dependencies
 [dependencies]
-clap = { version = "3.0.0-rc.8", features = ["derive"] }
+clap = { version = "3.0.0-rc.11", features = ["derive"] }
 
 [dependencies.retry]
 version = "1.3.0"
