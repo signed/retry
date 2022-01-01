@@ -17,7 +17,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     let arguments = arguments();
     let retry_count = arguments.count.unwrap_or(u64::MAX);
     let retry_duration = arguments.duration_in_seconds.map(|u| { Duration::from_secs(u) }).unwrap_or(Duration::MAX);
-    let notify = arguments.notify;
     let script_path = arguments.script.clone().into_os_string().into_string().unwrap();
 
     let ui = user_interface::new_indicative(&arguments);
@@ -46,7 +45,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     });
 
-    if notify {
+    if arguments.notify {
         ui.send_notification(&script_path, retry_result.is_ok())?;
     }
 
