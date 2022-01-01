@@ -7,7 +7,7 @@ use retry::delay::Fixed;
 
 use arguments::{arguments, Arguments};
 use retry_extension::FixedExt;
-use user_interface::{Indicative, UserInterface};
+use user_interface::UserInterface;
 
 mod arguments;
 mod retry_extension;
