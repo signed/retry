@@ -1,61 +1,45 @@
 use std::error::Error;
-use std::path::PathBuf;
 use std::process::Command;
 use std::time::{Duration, Instant};
 
-use retry::{OperationResult, retry};
+use retry::{OperationResult, retry_with_index};
 use retry::delay::Fixed;
 
-use clap::Parser;
+use arguments::{arguments, Arguments};
+use retry_extension::FixedExt;
+use user_interface::{Indicative, UserInterface};
 
-#[derive(Parser, Debug)]
-#[clap(name = "retry", about, version)]
-struct CliArgs {
-    /// maximum number of script executions before giving up
-    #[clap(long)]
-    count: Option<u64>,
-
-    /// maximum duration in seconds before giving up
-    #[clap(long)]
-    duration: Option<u64>,
-
-    /// send system notification on exit
-    #[clap(long, takes_value=false)]
-    notify: bool,
-
-    /// delay between script executions in seconds
-    #[clap(long)]
-    delay: u64,
-
-    /// path to the script to retry
-    #[clap()]
-    script: PathBuf,
-}
+mod arguments;
+mod retry_extension;
+mod user_interface;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let args: CliArgs = CliArgs::parse();
-    let retry_count = args.count.unwrap_or(u64::MAX);
-    let retry_duration = args.duration.map(|u| { Duration::from_secs(u) }).unwrap_or(Duration::MAX);
-    let notify = args.notify;
-    let delay_in_seconds = args.delay;
-    let script_path = args.script.into_os_string().into_string().unwrap();
+    let arguments = arguments();
+    let retry_count = arguments.count.unwrap_or(u64::MAX);
+    let retry_duration = arguments.duration_in_seconds.map(|u| { Duration::from_secs(u) }).unwrap_or(Duration::MAX);
+    let notify = arguments.notify;
+    let script_path = arguments.script.clone().into_os_string().into_string().unwrap();
+
+    let ui = user_interface::new_indicative(&arguments);
+    ui.display();
 
     let started = Instant::now();
 
-    let duration_iterator = Fixed::from_millis(delay_in_seconds * 1000)
-        .take(usize::try_from(retry_count)?)
+    let duration_iterator = Fixed::from_seconds(arguments.delay_in_seconds)
+        .take(usize::try_from(retry_count - 1)?)
         .take_while(|_| {
             return started.elapsed() <= retry_duration;
         });
-    let retry_result = retry(duration_iterator, || {
+    let retry_result = retry_with_index(duration_iterator, |index| {
+        ui.starting_retry(index);
         let result = Command::new(&script_path)
             .output();
-        let output = match result {
+        let script_output = match result {
             Err(_) => return OperationResult::Err("unable to execute script"),
             Ok(output) => output,
         };
-
-        match output.status.code() {
+        ui.retry_done();
+        match script_output.status.code() {
             Some(code) if { code == 0 } => OperationResult::Ok(code),
             Some(_) => OperationResult::Retry("different code"),
             None => OperationResult::Err("broken"),
@@ -63,21 +47,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     });
 
     if notify {
-        send_notification(&script_path, retry_result.is_ok())?;
+        ui.send_notification(&script_path, retry_result.is_ok())?;
     }
-    Ok(())
-}
 
-fn send_notification(script_name: &str, retry_ok: bool) -> Result<(), Box<dyn Error>> {
-    let emoji = match retry_ok {
-        true => "✅",
-        false => "❌"
-    };
-    let title = format!("{emoji} retry {script_name}", emoji = emoji, script_name = script_name);
-    let display_script = format!("display notification \"{message}\" with title \"{title}\" subtitle \"{subtitle}\"", title = "", subtitle = "", message = title);
-    Command::new("osascript")
-        .arg("-e")
-        .arg(display_script)
-        .output()?;
-    return Ok(())
+    ui.close();
+    Ok(())
 }
